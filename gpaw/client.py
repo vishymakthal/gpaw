@@ -12,9 +12,9 @@ from google.auth.transport.requests import Request
 import os
 import pickle
 
-from .services import GoogleSheets
-from .services import GoogleTasks
-from .services import GoogleCalendar
+from .services.sheets import GoogleSheets
+from .services.tasks import GoogleTasks
+from .services.calendar import GoogleCalendar
 
 # Service Keys
 sheets_key = 'sheets'
@@ -31,58 +31,61 @@ class Client(object):
     """
 
     def __init__(self, creds, scopes, token='token.pickle'):
-        self.auth = None
-        self.svc = {}
-        self.creds = creds
-        self.scopes = scopes
-        self.token = token
+        self._auth = None
+        self._svc = {}
+        self._creds = creds
+        self._scopes = scopes
+        self._token = token
 
     def _authorize(self):
         """
         Authorizes the client using the user's provided credentials file and scopes.
         """
-        if os.path.exists(self.token):
-            with open(self.token, 'rb') as token:
-                self.auth = pickle.load(token)
+        if os.path.exists(self._token):
+            with open(self._token, 'rb') as token:
+                self._auth = pickle.load(token)
         
-        if not self.auth or not self.auth.valid:
-            if self.auth and self.auth.expired and self.auth.refresh_token:
-                self.auth.refresh(Request())
+        if not self._auth or not self._auth.valid:
+            if self._auth and self._auth.expired and self._auth.refresh_token:
+                self._auth.refresh(Request())
             else:
                 flow = InstalledAppFlow.from_client_secrets_file(
-                    self.creds, self.scopes)
-                self.auth = flow.run_local_server()
-            with open(self.token, 'wb') as token:
-                pickle.dump(self.auth, token)
+                    self._creds, self._scopes)
+                self._auth = flow.run_local_server()
+            with open(self._token, 'wb') as token:
+                pickle.dump(self._auth, token)
 
     
-    def Sheets(self):
+    def sheets(self):
         """Returns a Google Sheets instance. Creates a new one if not present already.
         
         :returns: a :class:`~gpaw.services.Sheets` instance.
         """
-        if self.svc.get(sheets_key, None):
-            return self.svc[sheets_key]
+        if self._svc.get(sheets_key, None):
+            return self._svc[sheets_key]
 
-        return GoogleSheets(self.auth)
+        self._svc[sheets_key] = GoogleSheets(self._auth)
+        return self._svc[sheets_key] 
 
-    def Tasks(self):
+    def tasks(self):
         """Returns a Google Tasks instance. Creates a new one if not present already.
         
         :returns: a :class:`~gpaw.services.Tasks` instance.
         """
-        if self.svc.get(tasks_key, None):
-            return self.svc[tasks_key]
+        if self._svc.get(tasks_key, None):
+            return self._svc[tasks_key]
 
-        return GoogleTasks(self.auth)
+        self._svc[tasks_key] = GoogleTasks(self._auth)
+        return self._svc[tasks_key] 
 
-    def Calendar(self):
+    def calendar(self):
         """Returns a Google Calendar instance. Creates a new one if not present already.
         
         :returns: a :class:`~gpaw.services.Calendar` instance.
         """
-        if self.svc.get(cal_key, None):
-            return self.svc[cal_key]
+        if self._svc.get(cal_key, None):
+            return self._svc[cal_key]
 
-        return GoogleCalendar(self.auth)
+        self._svc[cal_key] = GoogleCalendar(self._auth)
+        return self._svc[cal_key] 
 
