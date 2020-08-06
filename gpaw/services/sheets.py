@@ -36,9 +36,13 @@ class Spreadsheet():
         self.id = _id 
 
     def read(self, cells, columns=False):
-        '''
-        Reads data from a provided range. 
-        ''' 
+        """Reads data from a provided range.
+        
+        :param cells (str): Range of cells to read 
+        :param columns (bool): flag to specify that columns are being written.
+
+        :returns List[List]: 2D array representing cells read.
+        """ 
 
         result = self._c.values().get(
             spreadsheetId=self.id,
@@ -49,14 +53,13 @@ class Spreadsheet():
         return result['values']
 
     def write(self, cells, data, columns=False):
-        '''
-        Writes data to a range of cells. Data will fill as much of the range provided as possible, and
+        """Writes data to a range of cells. Data will fill as much of the range provided as possible, and
         will be truncated if it doesn't fit in the cell range.
 
         :param cell (str): First cell of the range to write to (top left corner of the range)
         :param data (List[List]): List of rows/columns to write to the spreadsheet.
         :param columns (bool): flag to specify that columns are being written.
-        ''' 
+        """ 
 
         self._c.values().update(
             spreadsheetId=self.id,

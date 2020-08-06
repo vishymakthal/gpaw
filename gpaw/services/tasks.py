@@ -1,6 +1,11 @@
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 from gpaw.services.gsuite import GoogleSuite
+from gpaw.exceptions import AuthenticationError
+
+import datetime
+from dateutil.tz import tzlocal
 
 class GoogleTasks(GoogleSuite):
     """The service object responsible for providing an interface with Google Tasks.
@@ -10,7 +15,44 @@ class GoogleTasks(GoogleSuite):
     """
     def __init__(self, auth):
         GoogleSuite.__init__(self, auth)
-        self.service = build('tasks', 'v1', credentials=self.auth).tasks()
+        self._client = build('tasks', 'v1', credentials=self.auth)
+        self._tasklists = {}
+        self._sync_tasklists()
 
-    def Create(self):
-        print('create task')
+    def tasklist(self, name):
+
+        if self._tasklists.get(name, False):
+            return self._tasklists[name]
+
+        print('Task list {} not found!'.format(name))
+
+    def _sync_tasklists(self):
+        try:
+            lists = self._client.tasklists().list().execute()['items']
+            for tl in lists:
+                self._tasklists[tl['title']] = Tasklist(self._client, tl) 
+        except HttpError:
+            print('Auth scopes must inlcude https://www.googleapis.com/auth/tasks')
+
+class Tasklist():
+
+    def __init__(self, c, tasklist):
+        self._c = c
+        self._tl = tasklist 
+
+    def list_tasks(self, include_done=None):
+
+        return self._c.tasks().list(tasklist=self._tl['id'],showCompleted=include_done).execute()['items']
+
+    def create_task(self, name, due=None, done=False):
+
+        b = {
+            'status': 'completed' if done else 'needsAction',
+            'title' : name,
+            'due' : due if due else datetime.datetime.now(tzlocal()).isoformat('T')[:26]+ 'Z'
+        } 
+        self._c.tasks().insert(tasklist=self._tl['id'],body=b).execute()
+
+    def delete_task(self, task_id):
+
+        self._c.tasks().delete(tasklist=self._tl['id'], task=task_id).execute()
